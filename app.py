@@ -205,22 +205,40 @@ elif step == 4:
         result = st.session_state.result
         info = st.session_state.info
 
+        # Logo
+        logo_col, _ = st.columns([1, 5])
+        with logo_col:
+            if os.path.exists("assets/selected_logo.png"):
+                st.image("assets/selected_logo.png", width=160)
+
         st.subheader("Setup Complete!")
         st.success(f"**{info['client_name']}** created successfully")
 
-        col1, col2, col3 = st.columns(3)
-        col1.metric("GTM Container", result["gtm_id"])
-        col2.metric("GA4 Measurement ID", result["measurement_id"])
-        col3.metric("GA4 Stream ID", result["stream_id"])
-
+        # IDs — full values, no truncation
         st.divider()
+        id1, id2, id3 = st.columns(3)
+        with id1:
+            st.caption("GTM Container")
+            st.markdown(f"### `{result['gtm_id']}`")
+        with id2:
+            st.caption("GA4 Measurement ID")
+            st.markdown(f"### `{result['measurement_id']}`")
+        with id3:
+            st.caption("GA4 Property ID")
+            st.markdown(f"### `{result['property_id']}`")
+            st.markdown("[use at selected crm](https://www.selected-crm.com/seo-full.php)")
 
-        if result["kept_tags"]:
-            st.markdown(f"**Tags created ({len(result['kept_tags'])}):** " +
-                        ", ".join(result["kept_tags"]))
+        # Tags log with green checkmarks
+        st.divider()
+        st.subheader(f"Tags Created ({len(result['kept_tags'])})")
+        for tag in result["kept_tags"]:
+            st.markdown(f"✅ &nbsp; {tag}")
+
         if result["removed_tags"]:
-            st.markdown(f"**Tags skipped ({len(result['removed_tags'])}):** " +
-                        ", ".join(result["removed_tags"]))
+            st.divider()
+            with st.expander(f"Tags Skipped ({len(result['removed_tags'])})"):
+                for tag in result["removed_tags"]:
+                    st.markdown(f"⏭️ &nbsp; {tag}")
 
         st.divider()
         st.subheader("HEAD code — paste above `</head>`")

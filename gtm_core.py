@@ -92,8 +92,10 @@ def run_client_setup(creds, info: dict, ga4_account_id: str, log_callback=None):
     )
     measurement_id = stream.web_stream_data.measurement_id
     stream_id = stream.name.split("/")[-1]
+    property_id = prop.name.split("/")[-1]
     log(f"[OK] GA4 Measurement ID: {measurement_id}")
-    log(f"[OK] GA4 Stream ID: {stream_id}")
+    log(f"[OK] GA4 Property ID:    {property_id}")
+    log(f"[OK] GA4 Stream ID:      {stream_id}")
 
     log("Processing GTM template...")
     version, kept_tags, removed_tags = _process_template(info, measurement_id, stream_id)
@@ -111,6 +113,7 @@ def run_client_setup(creds, info: dict, ga4_account_id: str, log_callback=None):
         "gtm_id": gtm_id,
         "measurement_id": measurement_id,
         "stream_id": stream_id,
+        "property_id": property_id,
         "kept_tags": kept_tags,
         "removed_tags": removed_tags,
         "head_code": head_code,
