@@ -13,8 +13,22 @@ SCOPES = [
 ]
 
 
+def _read_token_json() -> str | None:
+    # Try Streamlit secrets first (works on Streamlit Cloud)
+    try:
+        import streamlit as st
+        val = st.secrets.get("GOOGLE_TOKEN_JSON", "")
+        if val:
+            return val.strip().replace("\r", "").replace("\n", "")
+    except Exception:
+        pass
+    # Fall back to environment variable (local dev / Railway)
+    val = os.environ.get("GOOGLE_TOKEN_JSON", "")
+    return val.strip().replace("\r", "").replace("\n", "") if val else None
+
+
 def load_credentials() -> Credentials:
-    token_json = os.environ.get("GOOGLE_TOKEN_JSON")
+    token_json = _read_token_json()
     if token_json:
         creds = Credentials.from_authorized_user_info(json.loads(token_json), SCOPES)
     elif os.path.exists("token.json"):

@@ -7,8 +7,15 @@ from gtm_core import list_ga4_accounts, run_client_setup
 st.set_page_config(page_title="GTM + GA4 Setup", page_icon="🏷️", layout="centered")
 
 
+def _get_secret(key: str) -> str:
+    try:
+        return st.secrets.get(key, "") or os.environ.get(key, "")
+    except Exception:
+        return os.environ.get(key, "")
+
+
 def _check_password():
-    app_password = os.environ.get("APP_PASSWORD", "")
+    app_password = _get_secret("APP_PASSWORD")
     if not app_password or st.session_state.get("authenticated"):
         return
     st.title("GTM + GA4 Setup")
