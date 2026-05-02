@@ -38,6 +38,9 @@ def load_credentials() -> Credentials:
             "No Google credentials found. "
             "Set the GOOGLE_TOKEN_JSON environment variable or place token.json in the working directory."
         )
-    if creds.expired and creds.refresh_token:
+    # The stored access token is always expired on Streamlit Cloud — always refresh
+    if creds.refresh_token:
         creds.refresh(Request())
+    elif not creds.valid:
+        raise RuntimeError("Token is invalid and cannot be refreshed. Re-authenticate locally and update GOOGLE_TOKEN_JSON.")
     return creds
