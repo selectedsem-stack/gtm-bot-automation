@@ -19,6 +19,7 @@ from google.analytics.admin_v1alpha.types import (
 
 SCOPES = [
     "https://www.googleapis.com/auth/tagmanager.edit.containers",
+    "https://www.googleapis.com/auth/tagmanager.edit.containerversions",
     "https://www.googleapis.com/auth/tagmanager.publish",
     "https://www.googleapis.com/auth/tagmanager.readonly",
     "https://www.googleapis.com/auth/analytics.edit",
