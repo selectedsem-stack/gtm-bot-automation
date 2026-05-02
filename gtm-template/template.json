@@ -1,0 +1,395 @@
+{
+  "exportFormatVersion": 2,
+  "containerVersion": {
+    "builtInVariable": [
+      {"type": "PAGE_URL",       "name": "Page URL"},
+      {"type": "CLICK_ELEMENT",  "name": "Click Element"},
+      {"type": "CLICK_CLASSES",  "name": "Click Classes"},
+      {"type": "CLICK_ID",       "name": "Click ID"},
+      {"type": "CLICK_TARGET",   "name": "Click Target"},
+      {"type": "CLICK_URL",      "name": "Click URL"},
+      {"type": "CLICK_TEXT",     "name": "Click Text"}
+    ],
+    "tag": [
+      {
+        "tagId": "1",
+        "name": "GA4 - Configuration",
+        "type": "googtag",
+        "parameter": [
+          {"type": "template", "key": "tagId", "value": "PLACEHOLDER_GA4_ID"}
+        ],
+        "firingTriggerId": ["2147479553"],
+        "tagFiringOption": "ONCE_PER_EVENT"
+      },
+      {
+        "tagId": "11",
+        "name": "GA4 - Stream ID",
+        "type": "googtag",
+        "parameter": [
+          {"type": "template", "key": "tagId", "value": "PLACEHOLDER_STREAM_ID"}
+        ],
+        "firingTriggerId": ["2147479553"],
+        "tagFiringOption": "ONCE_PER_EVENT"
+      },
+      {
+        "tagId": "7",
+        "name": "Conversion Linker",
+        "type": "gclidw",
+        "parameter": [
+          {"type": "boolean", "key": "enableCrossDomainFeature", "value": "false"}
+        ],
+        "firingTriggerId": ["2147479553"],
+        "tagFiringOption": "ONCE_PER_EVENT"
+      },
+      {
+        "tagId": "2",
+        "name": "GA4 - Event - page_view",
+        "type": "gaawe",
+        "parameter": [
+          {"type": "template", "key": "measurementIdOverride", "value": "PLACEHOLDER_GA4_ID"},
+          {"type": "template", "key": "eventName",             "value": "page_view"},
+          {"type": "boolean",  "key": "sendEcommerceData",     "value": "false"}
+        ],
+        "firingTriggerId": ["2147479553"],
+        "tagFiringOption": "ONCE_PER_EVENT"
+      },
+      {
+        "tagId": "13",
+        "name": "GA4 - Event - contact_form_submission",
+        "type": "gaawe",
+        "parameter": [
+          {"type": "template", "key": "measurementIdOverride", "value": "PLACEHOLDER_GA4_ID"},
+          {"type": "template", "key": "eventName", "value": "contact_form_submission"},
+          {
+            "type": "list",
+            "key": "eventParameters",
+            "list": [
+              {
+                "type": "map",
+                "map": [
+                  {"type": "template", "key": "name",  "value": "contact_form_submission"},
+                  {"type": "template", "key": "value", "value": "1"}
+                ]
+              }
+            ]
+          }
+        ],
+        "firingTriggerId": ["20"],
+        "tagFiringOption": "ONCE_PER_EVENT"
+      },
+      {
+        "tagId": "14",
+        "name": "GA4 - Event - phone_clicks",
+        "type": "gaawe",
+        "parameter": [
+          {"type": "template", "key": "measurementIdOverride", "value": "PLACEHOLDER_GA4_ID"},
+          {"type": "template", "key": "eventName", "value": "phone_clicks"},
+          {
+            "type": "list",
+            "key": "eventParameters",
+            "list": [
+              {
+                "type": "map",
+                "map": [
+                  {"type": "template", "key": "name",  "value": "phone_clicks"},
+                  {"type": "template", "key": "value", "value": "1"}
+                ]
+              }
+            ]
+          }
+        ],
+        "firingTriggerId": ["21"],
+        "tagFiringOption": "ONCE_PER_EVENT"
+      },
+      {
+        "tagId": "15",
+        "name": "GA4 - Event - wa_clicks",
+        "type": "gaawe",
+        "parameter": [
+          {"type": "template", "key": "measurementIdOverride", "value": "PLACEHOLDER_GA4_ID"},
+          {"type": "template", "key": "eventName", "value": "wa_clicks"},
+          {
+            "type": "list",
+            "key": "eventParameters",
+            "list": [
+              {
+                "type": "map",
+                "map": [
+                  {"type": "template", "key": "name",  "value": "wa_clicks"},
+                  {"type": "template", "key": "value", "value": "1"}
+                ]
+              }
+            ]
+          }
+        ],
+        "firingTriggerId": ["22"],
+        "tagFiringOption": "ONCE_PER_EVENT"
+      },
+      {
+        "tagId": "3",
+        "name": "GA4 - Event - purchase",
+        "type": "gaawe",
+        "parameter": [
+          {"type": "template", "key": "measurementIdOverride", "value": "PLACEHOLDER_GA4_ID"},
+          {"type": "template", "key": "eventName",             "value": "purchase"},
+          {"type": "boolean",  "key": "sendEcommerceData",     "value": "true"},
+          {"type": "template", "key": "ecommerceMacroData",    "value": "{{ecommerce}}"}
+        ],
+        "firingTriggerId": ["10"],
+        "tagFiringOption": "ONCE_PER_EVENT"
+      },
+      {
+        "tagId": "4",
+        "name": "GA4 - Event - add_to_cart",
+        "type": "gaawe",
+        "parameter": [
+          {"type": "template", "key": "measurementIdOverride", "value": "PLACEHOLDER_GA4_ID"},
+          {"type": "template", "key": "eventName",             "value": "add_to_cart"},
+          {"type": "boolean",  "key": "sendEcommerceData",     "value": "true"},
+          {"type": "template", "key": "ecommerceMacroData",    "value": "{{ecommerce}}"}
+        ],
+        "firingTriggerId": ["11"],
+        "tagFiringOption": "ONCE_PER_EVENT"
+      },
+      {
+        "tagId": "12",
+        "name": "GA4 - Event - remove_from_cart",
+        "type": "gaawe",
+        "parameter": [
+          {"type": "template", "key": "measurementIdOverride", "value": "PLACEHOLDER_GA4_ID"},
+          {"type": "template", "key": "eventName",             "value": "remove_from_cart"},
+          {"type": "boolean",  "key": "sendEcommerceData",     "value": "true"},
+          {"type": "template", "key": "ecommerceMacroData",    "value": "{{ecommerce}}"}
+        ],
+        "firingTriggerId": ["14"],
+        "tagFiringOption": "ONCE_PER_EVENT"
+      },
+      {
+        "tagId": "5",
+        "name": "GA4 - Event - begin_checkout",
+        "type": "gaawe",
+        "parameter": [
+          {"type": "template", "key": "measurementIdOverride", "value": "PLACEHOLDER_GA4_ID"},
+          {"type": "template", "key": "eventName",             "value": "begin_checkout"},
+          {"type": "boolean",  "key": "sendEcommerceData",     "value": "true"},
+          {"type": "template", "key": "ecommerceMacroData",    "value": "{{ecommerce}}"}
+        ],
+        "firingTriggerId": ["12"],
+        "tagFiringOption": "ONCE_PER_EVENT"
+      },
+      {
+        "tagId": "6",
+        "name": "GA4 - Event - view_item",
+        "type": "gaawe",
+        "parameter": [
+          {"type": "template", "key": "measurementIdOverride", "value": "PLACEHOLDER_GA4_ID"},
+          {"type": "template", "key": "eventName",             "value": "view_item"},
+          {"type": "boolean",  "key": "sendEcommerceData",     "value": "true"},
+          {"type": "template", "key": "ecommerceMacroData",    "value": "{{ecommerce}}"}
+        ],
+        "firingTriggerId": ["13"],
+        "tagFiringOption": "ONCE_PER_EVENT"
+      },
+      {
+        "tagId": "8",
+        "name": "Google Ads - Remarketing - PLACEHOLDER_ADS_ID",
+        "type": "sp",
+        "parameter": [
+          {"type": "template", "key": "conversionId", "value": "PLACEHOLDER_ADS_ID"},
+          {"type": "template", "key": "customParams",  "value": ""}
+        ],
+        "firingTriggerId": ["2147479553"],
+        "tagFiringOption": "ONCE_PER_EVENT"
+      },
+      {
+        "tagId": "9",
+        "name": "Facebook Pixel - Base - PLACEHOLDER_PIXEL_ID",
+        "type": "html",
+        "parameter": [
+          {
+            "type": "template",
+            "key": "html",
+            "value": "<script>\n!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){\nn.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};\nif(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';\nn.queue=[];t=b.createElement(e);t.async=!0;\nt.src=v;s=b.getElementsByTagName(e)[0];\ns.parentNode.insertBefore(t,s)}(window,document,'script',\n'https://connect.facebook.net/en_US/fbevents.js');\nfbq('init','PLACEHOLDER_PIXEL_ID');\nfbq('track','PageView');\n</script>\n<noscript><img height='1' width='1' style='display:none'\nsrc='https://www.facebook.com/tr?id=PLACEHOLDER_PIXEL_ID&ev=PageView&noscript=1'/></noscript>"
+          },
+          {"type": "boolean", "key": "supportDocumentWrite", "value": "false"}
+        ],
+        "firingTriggerId": ["2147479553"],
+        "tagFiringOption": "ONCE_PER_EVENT"
+      },
+      {
+        "tagId": "10",
+        "name": "Facebook Pixel - Event - purchase - PLACEHOLDER_PIXEL_ID",
+        "type": "html",
+        "parameter": [
+          {
+            "type": "template",
+            "key": "html",
+            "value": "<script>\nfbq('track','Purchase',{currency:'ILS',value:{{ecommerce.value}}});\n</script>"
+          },
+          {"type": "boolean", "key": "supportDocumentWrite", "value": "false"}
+        ],
+        "firingTriggerId": ["10"],
+        "tagFiringOption": "ONCE_PER_EVENT"
+      },
+      {
+        "tagId": "16",
+        "name": "Maskyoo - PLACEHOLDER_MASKYOO_NUMBER",
+        "type": "html",
+        "parameter": [
+          {
+            "type": "template",
+            "key": "html",
+            "value": "<script async id=\"msq_pixel_id\" type=\"text/javascript\" src=\"https://s3.eu-central-1.amazonaws.com/maskyoo-cdn/msq_pixel_2024.js?__maskyoo=PLACEHOLDER_MASKYOO_NUMBER&setting_api_key=d7c-022a29-e70&setting_debug=true&__ga4_tid=PLACEHOLDER_GA4_ID\"></script>"
+          },
+          {"type": "boolean", "key": "supportDocumentWrite", "value": "false"}
+        ],
+        "firingTriggerId": ["2147479553"],
+        "tagFiringOption": "ONCE_PER_EVENT"
+      }
+    ],
+    "trigger": [
+      {
+        "triggerId": "10",
+        "name": "Event - purchase",
+        "type": "CUSTOM_EVENT",
+        "customEventFilter": [
+          {
+            "type": "EQUALS",
+            "parameter": [
+              {"type": "template", "key": "arg0", "value": "{{_event}}"},
+              {"type": "template", "key": "arg1", "value": "purchase"}
+            ]
+          }
+        ]
+      },
+      {
+        "triggerId": "11",
+        "name": "Event - add_to_cart",
+        "type": "CUSTOM_EVENT",
+        "customEventFilter": [
+          {
+            "type": "EQUALS",
+            "parameter": [
+              {"type": "template", "key": "arg0", "value": "{{_event}}"},
+              {"type": "template", "key": "arg1", "value": "add_to_cart"}
+            ]
+          }
+        ]
+      },
+      {
+        "triggerId": "12",
+        "name": "Event - begin_checkout",
+        "type": "CUSTOM_EVENT",
+        "customEventFilter": [
+          {
+            "type": "EQUALS",
+            "parameter": [
+              {"type": "template", "key": "arg0", "value": "{{_event}}"},
+              {"type": "template", "key": "arg1", "value": "begin_checkout"}
+            ]
+          }
+        ]
+      },
+      {
+        "triggerId": "13",
+        "name": "Event - view_item",
+        "type": "CUSTOM_EVENT",
+        "customEventFilter": [
+          {
+            "type": "EQUALS",
+            "parameter": [
+              {"type": "template", "key": "arg0", "value": "{{_event}}"},
+              {"type": "template", "key": "arg1", "value": "view_item"}
+            ]
+          }
+        ]
+      },
+      {
+        "triggerId": "14",
+        "name": "Event - remove_from_cart",
+        "type": "CUSTOM_EVENT",
+        "customEventFilter": [
+          {
+            "type": "EQUALS",
+            "parameter": [
+              {"type": "template", "key": "arg0", "value": "{{_event}}"},
+              {"type": "template", "key": "arg1", "value": "remove_from_cart"}
+            ]
+          }
+        ]
+      },
+      {
+        "triggerId": "20",
+        "name": "Page View - Thank You Page",
+        "type": "PAGEVIEW",
+        "filter": [
+          {
+            "type": "CONTAINS",
+            "parameter": [
+              {"type": "template", "key": "arg0", "value": "{{Page URL}}"},
+              {"type": "template", "key": "arg1", "value": "PLACEHOLDER_THANKYOU_URL"}
+            ]
+          }
+        ]
+      },
+      {
+        "triggerId": "21",
+        "name": "Click - Phone (tel)",
+        "type": "LINK_CLICK",
+        "filter": [
+          {
+            "type": "CONTAINS",
+            "parameter": [
+              {"type": "template", "key": "arg0", "value": "{{Click URL}}"},
+              {"type": "template", "key": "arg1", "value": "tel:"}
+            ]
+          }
+        ]
+      },
+      {
+        "triggerId": "22",
+        "name": "Click - WhatsApp (wa.me)",
+        "type": "LINK_CLICK",
+        "filter": [
+          {
+            "type": "CONTAINS",
+            "parameter": [
+              {"type": "template", "key": "arg0", "value": "{{Click URL}}"},
+              {"type": "template", "key": "arg1", "value": "wa.me"}
+            ]
+          }
+        ]
+      }
+    ],
+    "variable": [
+      {
+        "variableId": "1",
+        "name": "ecommerce",
+        "type": "v",
+        "parameter": [
+          {"type": "integer",  "key": "dataLayerVersion", "value": "2"},
+          {"type": "boolean",  "key": "setDefaultValue",  "value": "false"},
+          {"type": "template", "key": "name",             "value": "ecommerce"}
+        ]
+      },
+      {
+        "variableId": "2",
+        "name": "ecommerce.value",
+        "type": "v",
+        "parameter": [
+          {"type": "integer",  "key": "dataLayerVersion", "value": "2"},
+          {"type": "boolean",  "key": "setDefaultValue",  "value": "false"},
+          {"type": "template", "key": "name",             "value": "ecommerce.value"}
+        ]
+      },
+      {
+        "variableId": "3",
+        "name": "Page URL - PLACEHOLDER_DOMAIN",
+        "type": "u",
+        "parameter": [
+          {"type": "template", "key": "component", "value": "URL"}
+        ]
+      }
+    ]
+  }
+}

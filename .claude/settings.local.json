@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install *)",
+      "Bash(python authenticate.py)",
+      "Bash(python -X utf8 list_accounts.py)",
+      "Bash(python -)",
+      "Bash(python new_client_setup.py)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('new_client_setup.py'\\).read\\(\\)\\); print\\('Syntax OK'\\)\")",
+      "Bash(del \"C:\\\\Users\\\\SEMSELECTED\\\\projects\\\\gtm-bot-automation\\\\token.json\")",
+      "Bash(python -m streamlit --version)",
+      "Bash(APP_PASSWORD=test python -m streamlit run app.py --server.headless true)"
+    ]
+  }
+}
