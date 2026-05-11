@@ -1,10 +1,17 @@
+import json
 import os
+import time
+
 import streamlit as st
 
-from auth import load_credentials
+from auth import NeedsReauthError, load_credentials
 from gtm_core import list_ga4_accounts, run_client_setup
+from web_oauth import build_flow, detect_redirect_uri, finish_auth, start_auth
 
 st.set_page_config(page_title="GTM + GA4 Setup", page_icon="🏷️", layout="centered")
+
+OAUTH_STATE_FILE = ".oauth_state.json"
+OAUTH_STATE_TTL_SEC = 600  # 10 minutes
 
 
 def _get_secret(key: str) -> str:
@@ -14,6 +21,131 @@ def _get_secret(key: str) -> str:
         return os.environ.get(key, "")
 
 
+# ── OAuth state persistence (survives the Google redirect) ─────────────────────
+def _save_oauth_state(state: str, redirect_uri: str) -> None:
+    with open(OAUTH_STATE_FILE, "w", encoding="utf-8") as f:
+        json.dump({"state": state, "redirect_uri": redirect_uri, "ts": time.time()}, f)
+
+
+def _load_oauth_state() -> dict | None:
+    if not os.path.exists(OAUTH_STATE_FILE):
+        return None
+    try:
+        with open(OAUTH_STATE_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception:
+        return None
+    if time.time() - data.get("ts", 0) > OAUTH_STATE_TTL_SEC:
+        _clear_oauth_state()
+        return None
+    return data
+
+
+def _clear_oauth_state() -> None:
+    try:
+        os.remove(OAUTH_STATE_FILE)
+    except FileNotFoundError:
+        pass
+
+
+# ── Token persistence ─────────────────────────────────────────────────────────
+def _persist_new_token(token_json: str) -> None:
+    """Persist refreshed token to working dir for the current session.
+
+    Streamlit Community Cloud has no public API for updating secrets, so the
+    new token must be copied to the Streamlit Cloud Secrets UI manually to
+    survive container restarts. The caller surfaces the JSON to the user.
+    """
+    with open("token.json", "w", encoding="utf-8") as f:
+        f.write(token_json)
+
+
+# ── OAuth callback handler ────────────────────────────────────────────────────
+def _handle_oauth_callback() -> None:
+    """If URL has ?code=...&state=..., finish the OAuth flow and store creds."""
+    params = st.query_params
+    if "code" not in params or "state" not in params:
+        return
+
+    code = params["code"]
+    received_state = params["state"]
+
+    saved = _load_oauth_state()
+    if not saved:
+        st.error("OAuth session expired or not found. Please start re-authorization again.")
+        st.query_params.clear()
+        if st.button("Start over"):
+            st.rerun()
+        st.stop()
+
+    try:
+        flow = build_flow(redirect_uri=saved["redirect_uri"])
+        creds = finish_auth(flow, saved["state"], received_state, code)
+    except Exception as e:
+        st.error(f"Authorization failed: {e}")
+        _clear_oauth_state()
+        st.query_params.clear()
+        if st.button("Try again"):
+            st.rerun()
+        st.stop()
+
+    token_json = creds.to_json()
+    _persist_new_token(token_json)
+
+    _clear_oauth_state()
+    st.session_state["creds"] = creds
+    st.session_state["reauth_message"] = "Token refreshed. The session is now active."
+    st.session_state["reauth_manual_token"] = token_json
+    st.query_params.clear()
+    st.rerun()
+
+
+# ── Reauth UI ─────────────────────────────────────────────────────────────────
+def _render_reauth_ui(reason: str | None = None) -> None:
+    st.title("Re-authorize Google Access")
+    if reason:
+        st.warning(reason)
+    st.markdown(
+        "The Google token has expired or been revoked. "
+        "Click the button below to re-authorize."
+    )
+
+    redirect_uri = detect_redirect_uri()
+    st.caption(f"Redirect URI in use: `{redirect_uri}` — must be registered in Google Cloud Console.")
+
+    if st.button("Authorize with Google", type="primary"):
+        try:
+            flow = build_flow(redirect_uri=redirect_uri)
+            auth_url, state = start_auth(flow)
+            _save_oauth_state(state, redirect_uri)
+        except Exception as e:
+            st.error(f"Could not start OAuth flow: {e}")
+            st.stop()
+
+        st.markdown(
+            f"<meta http-equiv='refresh' content='0; url={auth_url}'>",
+            unsafe_allow_html=True,
+        )
+        st.markdown(f"If you are not redirected, [click here]({auth_url}).")
+        st.stop()
+
+    st.stop()
+
+
+# ── Credentials gate (eager-load + cache in session) ─────────────────────────
+def _ensure_credentials():
+    if "creds" in st.session_state:
+        return st.session_state["creds"]
+    try:
+        creds = load_credentials()
+    except NeedsReauthError as e:
+        _render_reauth_ui(reason=str(e))
+        return None  # unreachable
+    st.session_state["creds"] = creds
+    return creds
+
+
+# ── Password gate ─────────────────────────────────────────────────────────────
 def _check_password():
     app_password = _get_secret("APP_PASSWORD")
     if not app_password or st.session_state.get("authenticated"):
@@ -30,7 +162,37 @@ def _check_password():
     st.stop()
 
 
+# ── Boot sequence ─────────────────────────────────────────────────────────────
 _check_password()
+_handle_oauth_callback()
+
+# Show post-reauth banner if we just finished
+if msg := st.session_state.pop("reauth_message", None):
+    st.success(msg)
+    manual = st.session_state.pop("reauth_manual_token", None)
+    if manual:
+        st.warning(
+            "**Important — save this token to Streamlit Cloud Secrets so it survives the next restart.**\n\n"
+            "1. Open [share.streamlit.io](https://share.streamlit.io/) → find this app → ⋮ → Settings → Secrets\n"
+            "2. Replace the `GOOGLE_TOKEN_JSON` line. Use **single quotes** (TOML literal string) so the inner double quotes are preserved:\n"
+            "   ```toml\n"
+            "   GOOGLE_TOKEN_JSON = '<paste the JSON below here, all on one line>'\n"
+            "   ```\n"
+            "3. Save — Streamlit Cloud will restart the app with the new token.\n\n"
+            "Until then, this session works, but a restart will require re-authorizing again."
+        )
+        st.code(manual, language="json")
+
+# Sidebar: manual re-authorize trigger (for proactive use)
+with st.sidebar:
+    st.caption("Account")
+    if st.button("Re-authorize Google"):
+        st.session_state.pop("creds", None)
+        st.session_state.pop("ga4_accounts", None)
+        _render_reauth_ui(reason="Manual re-authorization requested.")
+
+# Eager credentials check — triggers reauth UI if token is dead
+_ensure_credentials()
 
 if "step" not in st.session_state:
     st.session_state.step = 1
@@ -106,13 +268,13 @@ elif step == 2:
     st.title("New Client Setup")
     st.subheader("Step 2 of 3 — Select GA4 Account")
 
+    creds = _ensure_credentials()
+
     if "ga4_accounts" not in st.session_state:
         with st.spinner("Connecting to Google APIs..."):
             try:
-                creds = load_credentials()
                 accounts = list_ga4_accounts(creds)
                 st.session_state.ga4_accounts = accounts
-                st.session_state.creds = creds
             except Exception as e:
                 st.error(f"Failed to connect to Google APIs: {e}")
                 st.stop()
@@ -173,6 +335,8 @@ elif step == 3:
 elif step == 4:
     st.title("New Client Setup")
 
+    creds = _ensure_credentials()
+
     if "result" not in st.session_state:
         st.subheader("Running setup...")
         logs: list[str] = []
@@ -185,7 +349,7 @@ elif step == 4:
         try:
             with st.spinner("This takes about 20-30 seconds..."):
                 result = run_client_setup(
-                    st.session_state.creds,
+                    creds,
                     st.session_state.info,
                     st.session_state.selected_ga4["id"],
                     log_callback=on_log,

@@ -15,9 +15,12 @@
 | `new_client_setup.py` | סקריפט הקמת לקוח חדש — GTM + GA4 + תגים אוטומטי |
 | `gtm-template/template.json` | תבנית GTM container עם PLACEHOLDERs |
 | `token.json` | OAuth token לגישה ל-GTM API ו-GA4 API (נוצר אוטומטית) |
-| `oauth-credentials.json` | פרטי OAuth מ-Google Cloud (סודי) |
+| `oauth-credentials.json.json` | OAuth Desktop client — לאימות מקומי דרך `authenticate.py` |
+| `oauth-web-credentials.json` | OAuth Web Application client — לחידוש טוקן דרך ה-UI (לוקאלית) |
+| `auth.py` | טעינת credentials + רענון; מעלה `NeedsReauthError` אם הטוקן נשרף |
+| `web_oauth.py` | זרימת OAuth מבוססת-redirect לתוך Streamlit |
 
-**לעולם אל תעלה לשום מקום:** `sites.json`, `token.json`, `oauth-credentials.json`
+**לעולם אל תעלה לשום מקום:** `sites.json`, `token.json`, `oauth-credentials.json.json`, `oauth-web-credentials.json`, `.oauth_state.json`
 
 ---
 
@@ -130,12 +133,68 @@ GTM API לא תומך ביצירת accounts חדשים. לפני הרצת הסק
 
 | שגיאה | פתרון |
 |---|---|
-| `invalid_grant` — token פג | מחק token.json ← הרץ סקריפט אימות מחדש |
+| `invalid_grant` — token פג | פתח את האפליקציה ב-Streamlit — היא תציג כפתור "Authorize with Google" אוטומטית. אחרי חידוש הטוקן ועדכון Railway env var, האפליקציה ממשיכה כרגיל. (חלופה ידנית: הרצה של `authenticate.py` ועדכון `GOOGLE_TOKEN_JSON` ב-Railway dashboard) |
 | `403 GTM` — אין גישה ל-account | בדוק שה-OAuth מחובר לחשבון הנכון |
 | `SSH Connection refused` | בדוק IP ב-Cloudways Master Credentials |
 | `WP-CLI not found` | בדוק שה-wp_path ב-sites.json נכון |
 | `401 REST API` | צור Application Password חדשה |
 | `GA4 quota exceeded` | עבור ל-GA4 account אחר (מקסימום 100 properties לחשבון) |
+
+---
+
+## פלטפורמת הרצה: Streamlit Community Cloud
+
+האפליקציה רצה על Streamlit Community Cloud (URL מסתיים ב-`.streamlit.app`).
+ניהול האפליקציה והסודות נעשה ב-[share.streamlit.io](https://share.streamlit.io/).
+
+**הערה:** `railway.toml` נשאר בתיקייה כשריד מנסיון פריסה קודם — לא בשימוש.
+
+## הגדרת חידוש טוקן אוטומטי (חד-פעמי)
+
+כדי שהאפליקציה תוכל לחדש את הטוקן לבד דרך הדפדפן, צריך פעם אחת להגדיר:
+
+### 1. פרסום ה-OAuth app (חובה — אחרת הטוקן ימשיך למות כל 7 ימים)
+1. [Google Cloud Console → OAuth consent screen](https://console.cloud.google.com/apis/credentials/consent)
+2. **Publish App**
+3. אזהרת "Unverified app" עבור scopes פנימיים של הסוכנות — אפשר להתעלם. ה-app משמש אותך, לא משתמשים חיצוניים.
+
+### 2. Web OAuth client ב-Google Cloud Console
+1. [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials)
+2. **Create Credentials → OAuth client ID → Web application**
+3. Name: `gtm-bot-web`
+4. **Authorized redirect URIs** — הוסף **שניהם** (הסלאש בסוף חובה):
+   - `http://localhost:8501/` (לפיתוח מקומי)
+   - `https://<your-app-slug>.streamlit.app/` (production)
+5. Create → Download JSON
+
+### 3. Streamlit Cloud Secrets
+ב-[share.streamlit.io](https://share.streamlit.io/) → האפליקציה → ⋮ → **Settings → Secrets**, הקובץ צריך להיראות:
+
+```toml
+APP_PASSWORD = "..."                              # סיסמת הכניסה לאפליקציה
+GOOGLE_TOKEN_JSON = "..."                         # JSON של token.json (אם תהיה בעיה ב-TOML, השתמש במרכאות יחידות '...')
+OAUTH_REDIRECT_URI = "https://<your-app-slug>.streamlit.app/"
+
+[oauth_web_client]
+client_id = "..."
+project_id = "..."
+auth_uri = "https://accounts.google.com/o/oauth2/auth"
+token_uri = "https://oauth2.googleapis.com/token"
+auth_provider_x509_cert_url = "https://www.googleapis.com/oauth2/v1/certs"
+client_secret = "..."
+redirect_uris = ["http://localhost:8501/", "https://<your-app-slug>.streamlit.app/"]
+```
+
+**חשוב — סדר ב-TOML:** כל המפתחות הטופ-לבל (`APP_PASSWORD`, `GOOGLE_TOKEN_JSON`, `OAUTH_REDIRECT_URI`) חייבים להיות **לפני** כל `[section]`. אחרי `[oauth_web_client]` כל מפתח נכנס לתוך הסקציה.
+
+### זרימת חידוש (אחרי שהכל מוגדר)
+1. הטוקן נשרף → האפליקציה מציגה "Re-authorize Google Access"
+2. לוחץ "Authorize with Google" → Google → מאשר → חוזר ל-app
+3. App מציג את ה-`GOOGLE_TOKEN_JSON` החדש
+4. מעתיק אותו ל-Streamlit Cloud Secrets ושומר
+5. אחרי שמירה Streamlit Cloud עושה restart אוטומטי — האפליקציה חיה עם הטוקן החדש
+
+**חשוב:** ב-Streamlit Community Cloud אין API לעדכון Secrets — חייב לעדכן דרך ה-UI ידנית. עם זאת, ברגע שפרסמת את ה-OAuth app (שלב 1), refresh tokens לא פגים יותר ותצטרך לעבור את הזרימה הזו רק במקרים נדירים (ביטול ידני, אי-שימוש 6 חודשים).
 
 ---
 

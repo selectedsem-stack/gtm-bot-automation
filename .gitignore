@@ -1,7 +1,9 @@
 token.json
 oauth-credentials.json.json
+oauth-web-credentials.json
 gtm-credentials.json.json
 sites.json
+.oauth_state.json
 __pycache__/
 *.pyc
 *.pyo

@@ -3,6 +3,7 @@ import json
 
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
+from google.auth.exceptions import RefreshError
 
 SCOPES = [
     "https://www.googleapis.com/auth/tagmanager.edit.containers",
@@ -13,8 +14,11 @@ SCOPES = [
 ]
 
 
+class NeedsReauthError(RuntimeError):
+    """Refresh token is missing, expired, or revoked — user must re-authorize."""
+
+
 def _read_token_json() -> str | None:
-    # Try Streamlit secrets first (works on Streamlit Cloud)
     try:
         import streamlit as st
         val = st.secrets.get("GOOGLE_TOKEN_JSON", "")
@@ -22,7 +26,6 @@ def _read_token_json() -> str | None:
             return val.strip().replace("\r", "").replace("\n", "")
     except Exception:
         pass
-    # Fall back to environment variable (local dev / Railway)
     val = os.environ.get("GOOGLE_TOKEN_JSON", "")
     return val.strip().replace("\r", "").replace("\n", "") if val else None
 
@@ -34,13 +37,14 @@ def load_credentials() -> Credentials:
     elif os.path.exists("token.json"):
         creds = Credentials.from_authorized_user_file("token.json", SCOPES)
     else:
-        raise RuntimeError(
-            "No Google credentials found. "
-            "Set the GOOGLE_TOKEN_JSON environment variable or place token.json in the working directory."
-        )
-    # The stored access token is always expired on Streamlit Cloud — always refresh
-    if creds.refresh_token:
+        raise NeedsReauthError("No Google credentials found — initial authorization required.")
+
+    if not creds.refresh_token:
+        raise NeedsReauthError("Stored credentials have no refresh token — re-authorization required.")
+
+    try:
         creds.refresh(Request())
-    elif not creds.valid:
-        raise RuntimeError("Token is invalid and cannot be refreshed. Re-authenticate locally and update GOOGLE_TOKEN_JSON.")
+    except RefreshError as e:
+        raise NeedsReauthError(f"Refresh token rejected by Google: {e}") from e
+
     return creds
