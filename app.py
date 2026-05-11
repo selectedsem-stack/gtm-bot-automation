@@ -62,8 +62,17 @@ def _persist_new_token(token_json: str) -> None:
 
 # ── OAuth callback handler ────────────────────────────────────────────────────
 def _handle_oauth_callback() -> None:
-    """If URL has ?code=...&state=..., finish the OAuth flow and store creds."""
+    """If URL has ?code=...&state=... or ?error=..., handle the OAuth response."""
     params = st.query_params
+
+    if "error" in params:
+        err = params.get("error", "unknown_error")
+        desc = params.get("error_description", "")
+        st.session_state["oauth_error"] = f"{err}: {desc}" if desc else err
+        _clear_oauth_state()
+        st.query_params.clear()
+        return
+
     if "code" not in params or "state" not in params:
         return
 
@@ -93,6 +102,7 @@ def _handle_oauth_callback() -> None:
     _persist_new_token(token_json)
 
     _clear_oauth_state()
+    st.session_state.pop("oauth_auth_url", None)
     st.session_state["creds"] = creds
     st.session_state["reauth_message"] = "Token refreshed. The session is now active."
     st.session_state["reauth_manual_token"] = token_json
@@ -105,29 +115,40 @@ def _render_reauth_ui(reason: str | None = None) -> None:
     st.title("Re-authorize Google Access")
     if reason:
         st.warning(reason)
-    st.markdown(
-        "The Google token has expired or been revoked. "
-        "Click the button below to re-authorize."
-    )
+
+    if err := st.session_state.pop("oauth_error", None):
+        st.error(f"Last attempt returned an error from Google: **{err}**")
 
     redirect_uri = detect_redirect_uri()
     st.caption(f"Redirect URI in use: `{redirect_uri}` — must be registered in Google Cloud Console.")
 
-    if st.button("Authorize with Google", type="primary"):
-        try:
-            flow = build_flow(redirect_uri=redirect_uri)
-            auth_url, state = start_auth(flow)
-            _save_oauth_state(state, redirect_uri)
-        except Exception as e:
-            st.error(f"Could not start OAuth flow: {e}")
-            st.stop()
+    auth_url = st.session_state.get("oauth_auth_url")
 
-        st.markdown(
-            f"<meta http-equiv='refresh' content='0; url={auth_url}'>",
-            unsafe_allow_html=True,
-        )
-        st.markdown(f"If you are not redirected, [click here]({auth_url}).")
+    if not auth_url:
+        st.markdown("Step 1 — generate the Google authorization link:")
+        if st.button("Generate authorization link", type="primary"):
+            try:
+                flow = build_flow(redirect_uri=redirect_uri)
+                new_auth_url, state = start_auth(flow)
+                _save_oauth_state(state, redirect_uri)
+                st.session_state["oauth_auth_url"] = new_auth_url
+                st.rerun()
+            except Exception as e:
+                st.error(f"Could not start OAuth flow: {e}")
+                st.stop()
         st.stop()
+
+    st.markdown("Step 2 — open the Google authorization page (same tab) and complete the consent:")
+    st.link_button("Open Google authorization page →", auth_url, type="primary")
+
+    with st.expander("Trouble with the button? Copy this URL into your browser address bar"):
+        st.code(auth_url)
+
+    st.markdown("---")
+    if st.button("Reset and start over"):
+        st.session_state.pop("oauth_auth_url", None)
+        _clear_oauth_state()
+        st.rerun()
 
     st.stop()
 
