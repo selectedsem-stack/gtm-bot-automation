@@ -89,7 +89,12 @@ def build_flow(redirect_uri: str | None = None) -> Flow:
     return flow
 
 
-def start_auth(flow: Flow) -> Tuple[str, str]:
+def start_auth(flow: Flow) -> Tuple[str, str, str | None]:
+    """Generate auth URL. Returns (auth_url, state, code_verifier).
+
+    The code_verifier MUST be persisted across the redirect — Google's PKCE
+    requires it to be presented when exchanging the auth code for tokens.
+    """
     state = secrets.token_urlsafe(24)
     auth_url, _ = flow.authorization_url(
         access_type="offline",
@@ -97,12 +102,21 @@ def start_auth(flow: Flow) -> Tuple[str, str]:
         prompt="consent",
         state=state,
     )
-    return auth_url, state
+    code_verifier = getattr(flow, "code_verifier", None)
+    return auth_url, state, code_verifier
 
 
-def finish_auth(flow: Flow, expected_state: str, received_state: str, code: str):
+def finish_auth(
+    flow: Flow,
+    expected_state: str,
+    received_state: str,
+    code: str,
+    code_verifier: str | None = None,
+):
     if not expected_state or expected_state != received_state:
         raise RuntimeError("OAuth state mismatch — possible CSRF attempt. Please try again.")
+    if code_verifier:
+        flow.code_verifier = code_verifier
     flow.fetch_token(code=code)
     return flow.credentials
 

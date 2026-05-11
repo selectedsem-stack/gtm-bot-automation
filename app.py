@@ -22,9 +22,14 @@ def _get_secret(key: str) -> str:
 
 
 # ── OAuth state persistence (survives the Google redirect) ─────────────────────
-def _save_oauth_state(state: str, redirect_uri: str) -> None:
+def _save_oauth_state(state: str, redirect_uri: str, code_verifier: str | None) -> None:
     with open(OAUTH_STATE_FILE, "w", encoding="utf-8") as f:
-        json.dump({"state": state, "redirect_uri": redirect_uri, "ts": time.time()}, f)
+        json.dump({
+            "state": state,
+            "redirect_uri": redirect_uri,
+            "code_verifier": code_verifier,
+            "ts": time.time(),
+        }, f)
 
 
 def _load_oauth_state() -> dict | None:
@@ -89,7 +94,13 @@ def _handle_oauth_callback() -> None:
 
     try:
         flow = build_flow(redirect_uri=saved["redirect_uri"])
-        creds = finish_auth(flow, saved["state"], received_state, code)
+        creds = finish_auth(
+            flow,
+            saved["state"],
+            received_state,
+            code,
+            code_verifier=saved.get("code_verifier"),
+        )
     except Exception as e:
         st.error(f"Authorization failed: {e}")
         _clear_oauth_state()
@@ -129,8 +140,8 @@ def _render_reauth_ui(reason: str | None = None) -> None:
         if st.button("Generate authorization link", type="primary"):
             try:
                 flow = build_flow(redirect_uri=redirect_uri)
-                new_auth_url, state = start_auth(flow)
-                _save_oauth_state(state, redirect_uri)
+                new_auth_url, state, code_verifier = start_auth(flow)
+                _save_oauth_state(state, redirect_uri, code_verifier)
                 st.session_state["oauth_auth_url"] = new_auth_url
                 st.rerun()
             except Exception as e:
