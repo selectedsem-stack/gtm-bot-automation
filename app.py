@@ -123,12 +123,17 @@ def _handle_oauth_callback() -> None:
 
 # ── Reauth UI ─────────────────────────────────────────────────────────────────
 def _render_reauth_ui(reason: str | None = None) -> None:
-    st.title("Re-authorize Google Access")
+    st.title("חידוש הרשאת Google")
+    st.markdown(
+        "הטוקן ל-Google פג או אינו תקין. שני שלבים פשוטים:\n"
+        "1. לחץ על הכפתור הכחול למטה והתחבר עם החשבון של גוגל.\n"
+        "2. אחרי שתחזור — תקבל קופסה עם טקסט להעתיק אל Streamlit Cloud Secrets (הוראות מדויקות יופיעו)."
+    )
     if reason:
         st.warning(reason)
 
     if err := st.session_state.pop("oauth_error", None):
-        st.error(f"Last attempt returned an error from Google: **{err}**")
+        st.error(f"הניסיון האחרון החזיר שגיאה מ-Google: **{err}**")
 
     redirect_uri = detect_redirect_uri()
     st.caption(f"Redirect URI in use: `{redirect_uri}` — must be registered in Google Cloud Console.")
@@ -136,8 +141,8 @@ def _render_reauth_ui(reason: str | None = None) -> None:
     auth_url = st.session_state.get("oauth_auth_url")
 
     if not auth_url:
-        st.markdown("Step 1 — generate the Google authorization link:")
-        if st.button("Generate authorization link", type="primary"):
+        st.markdown("**שלב 1** — צור קישור הרשאה:")
+        if st.button("צור קישור הרשאה", type="primary"):
             try:
                 flow = build_flow(redirect_uri=redirect_uri)
                 new_auth_url, state, code_verifier = start_auth(flow)
@@ -149,14 +154,14 @@ def _render_reauth_ui(reason: str | None = None) -> None:
                 st.stop()
         st.stop()
 
-    st.markdown("Step 2 — open the Google authorization page (same tab) and complete the consent:")
-    st.link_button("Open Google authorization page →", auth_url, type="primary")
+    st.markdown("**שלב 2** — לחץ כדי לפתוח את דף ההרשאה של Google ולאשר:")
+    st.link_button("פתח את דף ההרשאה של Google →", auth_url, type="primary")
 
-    with st.expander("Trouble with the button? Copy this URL into your browser address bar"):
+    with st.expander("הכפתור לא עובד? העתק את הקישור הזה לסרגל הכתובות"):
         st.code(auth_url)
 
     st.markdown("---")
-    if st.button("Reset and start over"):
+    if st.button("התחל מחדש"):
         st.session_state.pop("oauth_auth_url", None)
         _clear_oauth_state()
         st.rerun()
@@ -204,14 +209,16 @@ if msg := st.session_state.pop("reauth_message", None):
     manual = st.session_state.pop("reauth_manual_token", None)
     if manual:
         st.warning(
-            "**Important — save this token to Streamlit Cloud Secrets so it survives the next restart.**\n\n"
-            "1. Open [share.streamlit.io](https://share.streamlit.io/) → find this app → ⋮ → Settings → Secrets\n"
-            "2. Replace the `GOOGLE_TOKEN_JSON` line. Use **single quotes** (TOML literal string) so the inner double quotes are preserved:\n"
+            "**חשוב — חייב להעתיק את הטוקן ל-Streamlit Cloud Secrets כדי שישרוד restart.**\n\n"
+            "1. פתח [share.streamlit.io](https://share.streamlit.io/) → האפליקציה הזו → ⋮ → **Settings → Secrets**\n"
+            "2. מצא את השורה שמתחילה ב-`GOOGLE_TOKEN_JSON = ...` (אולי כמה שורות אם הקודם היה `'''...'''`). מחק אותה לגמרי.\n"
+            "3. במקומה הדבק את ה-**שורה אחת** הבאה, עם **מרכאות בודדות** (`'...'`) — מרכאות בודדות חיוניות כי ה-JSON מכיל מרכאות כפולות:\n"
             "   ```toml\n"
-            "   GOOGLE_TOKEN_JSON = '<paste the JSON below here, all on one line>'\n"
+            "   GOOGLE_TOKEN_JSON = '<העתק את כל הטקסט מהתיבה השחורה למטה — שורה אחת, ללא רווחים מיותרים>'\n"
             "   ```\n"
-            "3. Save — Streamlit Cloud will restart the app with the new token.\n\n"
-            "Until then, this session works, but a restart will require re-authorizing again."
+            "4. ודא ש-`GOOGLE_TOKEN_JSON` נמצא **לפני** כל שורה שמתחילה ב-`[oauth_web_client]`.\n"
+            "5. לחץ **Save** — Streamlit Cloud יעשה restart אוטומטית והאפליקציה תעבוד עם הטוקן החדש.\n\n"
+            "עד שתעשה את זה — הסשן הנוכחי עובד, אבל ה-restart הבא ידרוש שוב reauth."
         )
         st.code(manual, language="json")
 
