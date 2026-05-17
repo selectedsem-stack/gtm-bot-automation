@@ -29,6 +29,10 @@ python list_ga_accounts.py
 
 # smoke test לגישת GTM API
 python test_gtm_api.py
+
+# עדכון נקודתי של טריגר WhatsApp ב-container קיים
+python update_wa_trigger.py <container_name>          # inspect בלבד (ברירת מחדל)
+python update_wa_trigger.py <container_name> --apply  # עדכון הטריגר + פרסום גרסה
 ```
 
 - **אין** test suite או linter מוגדרים בפרויקט.
@@ -75,6 +79,7 @@ python test_gtm_api.py
 | `oauth-web-credentials.json` | OAuth Web Application client — לחידוש טוקן דרך ה-UI (לוקאלית) |
 | `auth.py` | טעינת credentials + רענון; מעלה `NeedsReauthError` אם הטוקן נשרף |
 | `web_oauth.py` | זרימת OAuth מבוססת-redirect לתוך Streamlit |
+| `update_wa_trigger.py` | סקריפט תחזוקה — עדכון טריגר ב-container חי; `inspect` כברירת מחדל, `--apply` משנה ומפרסם גרסה |
 
 **לעולם אל תעלה לשום מקום:** `sites.json`, `token.json`, `oauth-credentials.json.json`, `oauth-web-credentials.json`, `.oauth_state.json`
 
@@ -96,6 +101,11 @@ python test_gtm_api.py
 - תבנית תגים: `gtm-template/template.json`
 - PLACEHOLDERs בתבנית: `PLACEHOLDER_GA4_ID`, `PLACEHOLDER_ADS_ID`, `PLACEHOLDER_PIXEL_ID`, `PLACEHOLDER_DOMAIN`
 - תגי eCommerce בתבנית מסומנים בשמות: ecommerce, purchase, add_to_cart, begin_checkout, view_item
+
+### מלכודות GTM API — לדעת לפני עבודה עם triggers / tags
+- **Casing של enums:** `template.json` (פורמט export) משתמש ב-UPPER_SNAKE_CASE — `LINK_CLICK`, `CONTAINS`, `MATCH_REGEX`, `PAGEVIEW`. ה-API **מחזיר** בקריאה camelCase — `linkClick`, `contains`, `matchRegex`, `pageview`. בכתיבה ה-API מקבל את שתי הצורות. קוד שמשווה שדה `type` חייב לנרמל casing.
+- **OR בפילטר trigger:** כמה תנאי `filter` באותו trigger מחוברים ב-AND. ל-OR (למשל URL שמכיל wa.me **או** api.whatsapp) — תנאי `matchRegex` יחיד עם `|`. שני תנאי `contains` נפרדים לעולם לא יירו יחד.
+- **עדכון container חי:** שנה entity ב-workspace → `workspaces().create_version()` → `versions().publish()`. לפני פרסום בדוק `workspaces().getStatus()` שאין שינויים תלויים אחרים שייכנסו לגרסה. שמות מתודות ב-googleapiclient הם snake_case (`create_version`) פרט ל-`getStatus` שנשאר camelCase.
 
 ### GA4
 - גישה דרך **Analytics Admin API** עם אותו OAuth token
@@ -189,7 +199,8 @@ GTM API לא תומך ביצירת accounts חדשים. לפני הרצת הסק
 
 | שגיאה | פתרון |
 |---|---|
-| `invalid_grant` — token פג | פתח את האפליקציה ב-Streamlit — היא תציג כפתור "Authorize with Google" אוטומטית. אחרי חידוש הטוקן ועדכון Railway env var, האפליקציה ממשיכה כרגיל. (חלופה ידנית: הרצה של `authenticate.py` ועדכון `GOOGLE_TOKEN_JSON` ב-Railway dashboard) |
+| `invalid_grant` — token פג/בוטל | פתח את האפליקציה ב-Streamlit — תציג כפתור "Authorize with Google" אוטומטית. אחרי חידוש, עדכן את ה-secret `GOOGLE_TOKEN_JSON` ב-Streamlit Cloud → Settings → Secrets. (חלופה מקומית: מחק `token.json` והרץ `authenticate.py`) |
+| `invalid_scope` ברענון טוקן | רשימות ה-SCOPES ב-`auth.py` ו-`authenticate.py` אינן זהות. ודא התאמה מלאה, מחק `token.json`, הרץ `authenticate.py` מחדש |
 | `403 GTM` — אין גישה ל-account | בדוק שה-OAuth מחובר לחשבון הנכון |
 | `SSH Connection refused` | בדוק IP ב-Cloudways Master Credentials |
 | `WP-CLI not found` | בדוק שה-wp_path ב-sites.json נכון |
@@ -260,3 +271,4 @@ redirect_uris = ["http://localhost:8501/", "https://<your-app-slug>.streamlit.ap
 - אל תריץ פעולות מסיביות בלי לאשר קודם על דוגמה אחת
 - אל תוסיף credentials ישירות לקוד — תמיד דרך token.json / sites.json
 - אל תפרסם container ב-GTM בלי לשאול אם לא ביקשו במפורש
+- אל תשנה את רשימת ה-SCOPES בקובץ אחד בלבד — `auth.py` (צרכן הטוקן) ו-`authenticate.py` (מנפיק הטוקן) חייבים רשימת scopes זהה
