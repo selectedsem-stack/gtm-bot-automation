@@ -1,9 +1,65 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 # gtm-bot-automation — מערכת ניהול לקוחות
 
 ## מה הפרויקט הזה
 
 מערכת אוטומציה לניהול כמה עשרות אתרי WordPress וחשבונות GTM/GA4 עבור סוכנות שיווק ישראלית.
 כל לקוח חדש מקבל GTM container, GA4 property, ותגים מלאים — אוטומטית, דרך שיחה אחת.
+
+---
+
+## פקודות נפוצות
+
+```bash
+# הרצת ה-Streamlit UI מקומית (ה-entry point הראשי)
+streamlit run app.py
+
+# יצירת token.json ראשוני באמצעות Desktop OAuth flow (פותח דפדפן)
+python authenticate.py
+
+# גרסת CLI אינטראקטיבית של הקמת לקוח (חלופה ל-Streamlit)
+python new_client_setup.py
+
+# כלי debug — רשימת GTM accounts / GA4 accounts זמינים לטוקן הנוכחי
+python list_accounts.py
+python list_ga_accounts.py
+
+# smoke test לגישת GTM API
+python test_gtm_api.py
+```
+
+- **אין** test suite או linter מוגדרים בפרויקט.
+- **דיפלוי:** push ל-branch `master` ב-`selectedsem-stack/gtm-bot-automation` → Streamlit Community Cloud עושה redeploy אוטומטי (~30 שניות). אין שלב build נפרד.
+
+---
+
+## ארכיטקטורה (כללי)
+
+### שתי נקודות כניסה, גרעין משותף
+- **`app.py`** — Streamlit web app (production entry point, רץ ב-Streamlit Cloud)
+- **`new_client_setup.py`** — CLI אינטראקטיבי (מקומי בלבד, לא משמש בפרודקשן)
+- שניהם קוראים ל-`gtm_core.py` שמרכז את כל הלוגיקה (יצירת GTM container, GA4 property, חיתוך תגים מהתבנית, פרסום).
+- `gtm_core.run_client_setup(creds, info, ga4_account_id, log_callback)` — orchestrator יחיד שמבצע את ההקמה מקצה לקצה.
+
+### זרימת credentials (קריטי להבנה)
+1. `auth.load_credentials()` קורא טוקן ב-priority הבא: `st.secrets["GOOGLE_TOKEN_JSON"]` → env var `GOOGLE_TOKEN_JSON` → קובץ `token.json` מקומי.
+2. מבצע `creds.refresh()` ומחזיר אותו.
+3. אם refresh נכשל (טוקן revoked/expired) — מעלה `NeedsReauthError`.
+4. `app.py::_ensure_credentials()` תופס את זה ומציג את `_render_reauth_ui()` במקום להתרסק.
+5. `_render_reauth_ui()` משתמש ב-`web_oauth.py` להפעיל זרימת OAuth web (PKCE) — המשתמש לוחץ → Google → חוזר ל-`?code=...&state=...` → `_handle_oauth_callback()` מחליף קוד לטוקן ושומר.
+6. **PKCE code_verifier** נשמר ב-`.oauth_state.json` יחד עם ה-state כי הוא חייב לשרוד את ה-redirect (Flow חדש בצד ה-callback ייצר verifier אחר וייכשל ב-`invalid_grant: Missing code verifier`).
+
+### שני OAuth clients — לא להתבלבל
+- **Desktop client** (`oauth-credentials.json.json`) — בשימוש רק ב-`authenticate.py` (יצירת token.json ראשוני מקומית, `InstalledAppFlow.run_local_server`).
+- **Web client** (`oauth-web-credentials.json` או `st.secrets["oauth_web_client"]`) — בשימוש רק ב-`web_oauth.py` עבור reauth UI ב-Streamlit. דורש redirect URIs רשומים ב-Google Cloud Console.
+
+### תבנית GTM
+- `gtm-template/template.json` — export מלא של container עם PLACEHOLDERs (`PLACEHOLDER_GA4_ID`, `PLACEHOLDER_ADS_ID`, `PLACEHOLDER_PIXEL_ID`, `PLACEHOLDER_DOMAIN`).
+- `gtm_core` משכפל את התבנית, מבצע substitution, ומסיר תגים לא רלוונטיים (לדוגמה תגי eCommerce כשהלקוח לא חנות — לפי `ECOMMERCE_KEYWORDS`).
+- שינוי תבנית: לעולם לא לערוך JSON ידנית — לעדכן ב-GTM UI ולייצא מחדש.
 
 ---
 
