@@ -348,14 +348,14 @@
       },
       {
         "triggerId": "22",
-        "name": "Click - WhatsApp (wa.me)",
+        "name": "Click - WhatsApp",
         "type": "LINK_CLICK",
         "filter": [
           {
-            "type": "CONTAINS",
+            "type": "MATCH_REGEX",
             "parameter": [
               {"type": "template", "key": "arg0", "value": "{{Click URL}}"},
-              {"type": "template", "key": "arg1", "value": "wa.me"}
+              {"type": "template", "key": "arg1", "value": "wa\\.me|api\\.whatsapp"}
             ]
           }
         ]
